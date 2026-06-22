@@ -606,47 +606,26 @@
     return cachedToken;
   }
 
-  /**
-   * Upload image as multipart/form-data.
-   * ASP.NET Core IFormFile binding requires the FormData key to exactly
-   * match the C# parameter name. The endpoint is named "uploadFormFile…"
-   * so we try "formFile" first, then fall back to "file" automatically
-   * if the server returns a 400 (model binding null = bad request).
-   */
+  /** Upload image as multipart/form-data — key matches C# param: IFormFile formFiles */
   async function uploadImage(file, token) {
-    // Keys to attempt in order — matching common ASP.NET Core IFormFile param names
-    const keys = ["formFile", "file"];
+    const fd = new FormData();
+    fd.append("formFiles", file, file.name);  // must match C# parameter name exactly
 
-    for (const key of keys) {
-      const fd = new FormData();
-      fd.append(key, file, file.name);
+    const res = await fetch(ENDPOINTS.upload, {
+      method: "POST",
+      // Do NOT set Content-Type — browser sets multipart/form-data + boundary automatically
+      headers: { Authorization: `Bearer ${token}` },
+      body: fd,
+    });
 
-      const res = await fetch(ENDPOINTS.upload, {
-        method: "POST",
-        // Do NOT set Content-Type manually — browser must set it with the
-        // correct multipart boundary, otherwise ASP.NET Core can't parse it
-        headers: { Authorization: `Bearer ${token}` },
-        body: fd,
-      });
+    if (res.status === 401) return null;
+    if (!res.ok) throw new Error(`Upload failed (HTTP ${res.status})`);
 
-      if (res.status === 401) return null;  // signal caller to refresh token
+    const json = await res.json();
+    if (json.code !== 0 || !json?.data?.fileSecretName)
+      throw new Error(json.message || "Upload failed: server returned an error.");
 
-      // 400 likely means wrong param name — try the next key
-      if (res.status === 400) {
-        console.warn(`Upload: key "${key}" returned 400, trying next…`);
-        continue;
-      }
-
-      if (!res.ok) throw new Error(`Upload failed (HTTP ${res.status})`);
-
-      const json = await res.json();
-      if (json.code !== 0 || !json?.data?.fileSecretName)
-        throw new Error(json.message || "Upload failed: server returned an error.");
-
-      return json.data.fileSecretName;
-    }
-
-    throw new Error("Upload failed: IFormFile parameter name mismatch. Check the C# controller.");
+    return json.data.fileSecretName;
   }
 
   /** Send template */
