@@ -485,7 +485,7 @@
      GLOBAL CONFIG — easy to change later
   ═══════════════════════════════════════════════ */
   const CONFIG = {
-    channelId:    15,
+    channelId:    19,
     headerType:   1,
     categoryId:   2,
     templateName: "bankcardtemplate",
@@ -493,12 +493,12 @@
     showInChat:   true,
   };
 
-  const BASE = "https://dev.qc-community.com";
+  const BASE = "https://dev.qc-community.com/wabp";
 
   const ENDPOINTS = {
-    login:       `${BASE}/wabp/identity/api/Authentication/login`,
-    upload:      `${BASE}/WABP/BackEndApi/api/File/uploadFormFileCloudFlare/fileModuleType/5`,
-    sendTemplate:`${BASE}/wabp/backendapi/api/WhatsApp/v1/send/template`,
+    login:       `${BASE}/identity/api/Authentication/login`,
+    upload:      `${BASE}/BackEndApi/api/File/uploadFormFileCloudFlare/fileModuleType/5`,
+    sendTemplate:`${BASE}/backendapi/api/WhatsApp/v1/send/template`,
   };
 
   /* ═══════════════════════════════════════════════
