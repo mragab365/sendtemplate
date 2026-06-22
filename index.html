@@ -308,37 +308,6 @@
     .spinner.active { display: block; }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* ─── Step indicator ─── */
-    .step-bar {
-      display: none;
-      gap: 6px;
-      margin-bottom: 24px;
-      align-items: center;
-    }
-    .step-bar.visible { display: flex; }
-    .step-item {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 12px;
-      font-weight: 500;
-      color: var(--muted);
-    }
-    .step-item.active { color: var(--wa-mid); }
-    .step-item.done { color: var(--wa-light); }
-    .step-dot {
-      width: 22px; height: 22px;
-      border-radius: 50%;
-      border: 2px solid var(--border);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 10px; font-weight: 700;
-      flex-shrink: 0;
-    }
-    .step-item.active .step-dot { border-color: var(--wa-mid); color: var(--wa-mid); background: rgba(18,140,126,0.08); }
-    .step-item.done .step-dot  { border-color: var(--wa-light); background: var(--wa-pale); color: var(--wa-dark); }
-    .step-sep { flex: 1; height: 2px; background: var(--border); border-radius: 2px; }
-    .step-sep.done { background: var(--wa-light); }
-
     /* ─── Toast ─── */
     #toast-container {
       position: fixed;
@@ -436,7 +405,7 @@
 <!-- Global overlay loader -->
 <div id="overlay">
   <div class="overlay-spinner"></div>
-  <div class="overlay-msg" id="overlay-msg">Authenticating…</div>
+  <div class="overlay-msg" id="overlay-msg">Processing… Please wait</div>
 </div>
 
 <!-- Toast container -->
@@ -458,24 +427,6 @@
   <!-- Body -->
   <div class="card-body">
 
-    <!-- Step bar -->
-    <div class="step-bar" id="step-bar">
-      <div class="step-item" id="step-1">
-        <div class="step-dot">1</div>
-        <span>Auth</span>
-      </div>
-      <div class="step-sep" id="sep-1"></div>
-      <div class="step-item" id="step-2">
-        <div class="step-dot">2</div>
-        <span>Upload</span>
-      </div>
-      <div class="step-sep" id="sep-2"></div>
-      <div class="step-item" id="step-3">
-        <div class="step-dot">3</div>
-        <span>Send</span>
-      </div>
-    </div>
-
     <!-- Mobile number -->
     <div class="form-group">
       <label for="mobile">Mobile Number <span class="req">*</span></label>
@@ -495,7 +446,7 @@
     <div class="form-group">
       <label>Image <span class="req">*</span></label>
       <div class="file-drop" id="file-drop">
-        <input type="file" id="file-input" accept="image/*" />
+        <input type="file" id="file-input" accept=".jpg,.jpeg,.png,image/jpeg,image/png" />
         <div class="file-drop-icon">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
             <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
@@ -503,7 +454,7 @@
           </svg>
         </div>
         <div class="file-drop-label">Click to choose an image</div>
-        <div class="file-drop-sub">JPG, PNG, WEBP — max 10 MB</div>
+        <div class="file-drop-sub">JPG and PNG only — max 10 MB</div>
       </div>
       <div class="field-error" id="file-err">Please select an image to upload.</div>
       <div class="file-preview" id="file-preview">
@@ -553,7 +504,7 @@
   /* ═══════════════════════════════════════════════
      STATE
   ═══════════════════════════════════════════════ */
-  let cachedToken = null;
+  let cachedToken = null;  // persists across submits
 
   /* ═══════════════════════════════════════════════
      HELPERS
@@ -611,7 +562,7 @@
   /* ═══════════════════════════════════════════════
      OVERLAY / LOADING
   ═══════════════════════════════════════════════ */
-  function setLoading(active, msg = "") {
+  function setLoading(active) {
     const overlay = document.getElementById("overlay");
     const btn     = document.getElementById("btn-submit");
     const spinner = document.getElementById("btn-spinner");
@@ -619,7 +570,7 @@
 
     if (active) {
       overlay.classList.add("active");
-      document.getElementById("overlay-msg").textContent = msg;
+      document.getElementById("overlay-msg").textContent = "Processing… Please wait";
       btn.disabled = true;
       spinner.classList.add("active");
       label.textContent = "Processing…";
@@ -632,32 +583,11 @@
   }
 
   /* ═══════════════════════════════════════════════
-     STEP BAR
-  ═══════════════════════════════════════════════ */
-  function setStep(step) {
-    document.getElementById("step-bar").classList.add("visible");
-    for (let i = 1; i <= 3; i++) {
-      const el  = document.getElementById(`step-${i}`);
-      const sep = i < 3 ? document.getElementById(`sep-${i}`) : null;
-      el.classList.remove("active", "done");
-      if (sep) sep.classList.remove("done");
-      if (i < step) { el.classList.add("done"); if (sep) sep.classList.add("done"); }
-      else if (i === step) el.classList.add("active");
-    }
-  }
-
-  function clearSteps() {
-    document.getElementById("step-bar").classList.remove("visible");
-  }
-
-  /* ═══════════════════════════════════════════════
      API CALLS
   ═══════════════════════════════════════════════ */
 
-  /** Step 1 — Get token */
-  async function getToken() {
-    setLoading(true, "Authenticating…");
-    setStep(1);
+  /** Get token — only called when no token cached or after 401 */
+  async function fetchToken() {
     const res = await fetch(ENDPOINTS.login, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -670,12 +600,16 @@
     return cachedToken;
   }
 
-  /** Step 2 — Upload image */
+  /** Returns cached token or fetches a fresh one */
+  async function getToken() {
+    if (!cachedToken) return await fetchToken();
+    return cachedToken;
+  }
+
+  /** Upload image as FormData */
   async function uploadImage(file, token) {
-    setLoading(true, "Uploading image…");
-    setStep(2);
     const fd = new FormData();
-    fd.append("file", file);
+    fd.append("formFile", file, file.name);
     const res = await fetch(ENDPOINTS.upload, {
       method: "POST",
       headers: { Authorization: `Bearer ${token}` },
@@ -689,10 +623,8 @@
     return json.data.fileSecretName;
   }
 
-  /** Step 3 — Send template */
+  /** Send template */
   async function sendTemplate(mobile, fileSecretName, token) {
-    setLoading(true, "Sending template…");
-    setStep(3);
     const body = {
       channelId:    CONFIG.channelId,
       headerType:   CONFIG.headerType,
@@ -715,30 +647,33 @@
   }
 
   /* ═══════════════════════════════════════════════
-     MAIN FLOW  (with silent 401 retry)
+     MAIN FLOW  (cached token + silent 401 retry)
   ═══════════════════════════════════════════════ */
   async function runFlow(mobileFormatted, file) {
+    setLoading(true);
     try {
-      // 1 — Auth
+      // Use cached token or fetch if missing
       let token = await getToken();
 
-      // 2 — Upload (with 401 retry)
+      // Upload — on 401 refresh token once and retry
       let fileSecretName = await uploadImage(file, token);
       if (fileSecretName === null) {
-        token = await getToken();
+        cachedToken = null;
+        token = await fetchToken();
         fileSecretName = await uploadImage(file, token);
         if (fileSecretName === null) throw new Error("Upload failed: unauthorized after retry.");
       }
 
-      // 3 — Send (with 401 retry)
+      // Send template — on 401 refresh token once and retry
       let result = await sendTemplate(mobileFormatted, fileSecretName, token);
       if (result === null) {
-        token = await getToken();
+        cachedToken = null;
+        token = await fetchToken();
         result = await sendTemplate(mobileFormatted, fileSecretName, token);
         if (result === null) throw new Error("Send failed: unauthorized after retry.");
       }
 
-      // Done
+      // Result
       if (result.code === 0) {
         showToast("success", "Message sent!", result.message || "Template delivered successfully.");
       } else {
@@ -749,7 +684,6 @@
       showToast("error", "Error", err.message || "An unexpected error occurred.");
     } finally {
       setLoading(false);
-      clearSteps();
     }
   }
 
@@ -780,7 +714,15 @@
   }
 
   fileInput.addEventListener("change", () => {
-    if (fileInput.files[0]) showPreview(fileInput.files[0]);
+    const f = fileInput.files[0];
+    if (f) {
+      if (f.type !== "image/jpeg" && f.type !== "image/png") {
+        showToast("error", "Invalid file type", "Only JPG and PNG images are accepted.");
+        fileInput.value = "";
+        return;
+      }
+      showPreview(f);
+    }
   });
   fileClear.addEventListener("click", clearFile);
 
@@ -790,7 +732,7 @@
     e.preventDefault();
     fileDrop.classList.remove("drag-over");
     const f = e.dataTransfer.files[0];
-    if (f && f.type.startsWith("image/")) {
+    if (f && (f.type === "image/jpeg" || f.type === "image/png")) {
       fileInput.files = e.dataTransfer.files;
       showPreview(f);
     }
