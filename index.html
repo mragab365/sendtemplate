@@ -489,7 +489,7 @@
     categoryId:   2,
     templateName: "bankcardtemplate",
     languageCode: "en_US",
-    showInChat:   true,
+    showInChat:   false,
   };
 
   const BASE = "https://dev.qc-community.com/wabp";
@@ -638,7 +638,7 @@
       templateName: CONFIG.templateName,
       languageCode: CONFIG.languageCode,
       showInChat:   CONFIG.showInChat,
-      buttons: [{ index: 0, value: fileSecretName, typeId: 1 }],
+      buttons: [{ index: 0, value: fileSecretName, typeId: 3 }],
     };
     const res = await fetch(ENDPOINTS.sendTemplate, {
       method: "POST",
